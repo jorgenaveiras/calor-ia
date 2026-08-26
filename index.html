@@ -9,6 +9,8 @@
   <meta name="theme-color" content="#000000">
   <title>CalorIA</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" href="/icon-192.png">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -422,6 +424,24 @@
 
 <script>
 (function() {
+  // Global error display (so failures are visible, e.g. when launched from home screen)
+  function showFatal(msg) {
+    let el = document.getElementById('fatalError');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'fatalError';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:999;background:#ff453a;color:#fff;font:600 14px -apple-system,sans-serif;padding:14px 18px;text-align:center;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'Error: ' + msg;
+  }
+  window.addEventListener('error', function(e) {
+    showFatal((e && e.message) ? e.message : 'fallo inesperado');
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    showFatal((e && e.reason && e.reason.message) ? e.reason.message : 'promesa rechazada');
+  });
+
   const video = document.getElementById('video');
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
@@ -532,6 +552,9 @@
 
   async function initCamera() {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('getUserMedia no disponible (usa Safari y HTTPS)');
+      }
       if (stream) {
         stream.getTracks().forEach(t => t.stop());
       }
@@ -546,6 +569,7 @@
     } catch (e) {
       console.error(e);
       placeholder.querySelector('span').textContent = 'Sin acceso a la camara';
+      showFatal('Camara: ' + (e && e.name ? e.name : 'bloqueada') + '. En el icono de inicio, borra y vuelve a agregar la app, y acepta camara.');
     }
   }
 
