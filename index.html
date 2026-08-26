@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>CalorIA</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #000;
+      --card: #1c1c1e;
+      --text: #fff;
+      --text-secondary: #8e8e93;
+      --accent: #30d158;
+      --accent-dim: rgba(48, 209, 88, 0.15);
+      --danger: #ff453a;
+      --separator: rgba(255,255,255,0.08);
+      --safe-top: env(safe-area-inset-top, 20px);
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Header */
+    .header {
+      padding: calc(var(--safe-top) + 12px) 24px 16px;
+      text-align: center;
+      position: relative;
+      z-index: 10;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .header h1 span { color: var(--accent); }
+    .header p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Camera area */
+    .camera-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      margin: 0 16px;
+      background: var(--card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 24px;
+    }
+
+    #canvas { display: none; }
+
+    .camera-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-secondary);
+    }
+    .camera-placeholder svg {
+      width: 48px;
+      height: 48px;
+      opacity: 0.4;
+    }
+    .camera-placeholder span {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Overlay crosshair */
+    .crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      pointer-events: none;
+      z-index: 5;
+      opacity: 0.5;
+      transition: opacity 0.3s;
+    }
+    .crosshair.hidden { opacity: 0; }
+    .crosshair::before, .crosshair::after {
+      content: '';
+      position: absolute;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.6);
+    }
+    .crosshair::before { width: 1px; height: 100%; left: 50%; }
+    .crosshair::after { width: 100%; height: 1px; top: 50%; }
+
+    /* Bottom controls */
+    .controls {
+      padding: 20px 16px calc(var(--safe-bottom) + 16px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+    }
+
+    .btn-capture {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 4px solid #fff;
+      background: transparent;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .btn-capture::after {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      background: #fff;
+      transition: all 0.15s ease;
+    }
+    .btn-capture:active { transform: scale(0.92); }
+    .btn-capture:active::after { background: #ccc; }
+    .btn-capture.processing {
+      border-color: var(--accent);
+    }
+    .btn-capture.processing::after {
+      background: var(--accent);
+      animation: pulse 1s ease infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(0.85); opacity: 0.7; }
+    }
+
+    .btn-secondary {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s;
+    }
+    .btn-secondary:active { transform: scale(0.9); }
+    .btn-secondary svg { width: 22px; height: 22px; }
+
+    /* Result panel */
+    .result-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border-radius: 24px 24px 0 0;
+      padding: 20px 24px calc(var(--safe-bottom) + 20px);
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+      z-index: 20;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .result-panel.open { transform: translateY(0); }
+
+    .result-handle {
+      width: 36px;
+      height: 5px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.2);
+      margin: 0 auto 20px;
+    }
+
+    .result-food {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .result-serving {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .macro-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .macro-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+    .macro-card .value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .macro-card .label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .macro-card.cal .value { color: var(--accent); }
+    .macro-card.protein .value { color: #5e9eff; }
+    .macro-card.carbs .value { color: #ffd60a; }
+
+    .detail-list {
+      list-style: none;
+    }
+    .detail-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--separator);
+      font-size: 14px;
+    }
+    .detail-list li:last-child { border-bottom: none; }
+    .detail-list .dl { color: var(--text-secondary); }
+
+    .btn-close {
+      width: 100%;
+      padding: 14px;
+      border-radius: 14px;
+      border: none;
+      background: rgba(255,255,255,0.1);
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s;
+    }
+    .btn-close:active { background: rgba(255,255,255,0.15); }
+
+    .btn-new {
+      width: 100%;
+      padding: 14px;
+      border-radius: 14px;
+      border: none;
+      background: var(--accent);
+      color: #000;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.15s;
+    }
+    .btn-new:active { opacity: 0.8; }
+
+    /* Loading spinner */
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* Today total */
+    .today-badge {
+      position: absolute;
+      top: 0;
+      right: 16px;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 10;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .today-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* History */
+    .history-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border-radius: 24px 24px 0 0;
+      padding: 20px 24px calc(var(--safe-bottom) + 20px);
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+      z-index: 20;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .history-panel.open { transform: translateY(0); }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--separator);
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-item .hi-name { font-weight: 600; font-size: 15px; }
+    .history-item .hi-time { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .history-item .hi-cal { font-size: 18px; font-weight: 700; color: var(--accent); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 0;
+      color: var(--text-secondary);
+    }
+    .empty-state svg { width: 40px; height: 40px; opacity: 0.3; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>Calor<span>IA</span></h1>
+      <p>Toma una foto y cuenta tus calorias</p>
+    </div>
+
+    <div class="today-badge" id="todayBadge" style="display:none;">
+      <div class="dot"></div>
+      <span id="todayTotal">0 kcal hoy</span>
+    </div>
+
+    <div class="camera-container" id="cameraContainer">
+      <div class="camera-placeholder" id="placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 16a4 4 0 100-8 4 4 0 000 8z"/>
+          <path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z"/>
+        </svg>
+        <span>Pulsa para activar camara</span>
+      </div>
+      <video id="video" autoplay playsinline muted style="display:none;"></video>
+      <div class="crosshair hidden" id="crosshair"></div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="controls" id="controls">
+      <button class="btn-secondary" id="btnHistory" title="Historial">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 8v4l3 3"/>
+          <circle cx="12" cy="12" r="9"/>
+        </svg>
+      </button>
+      <button class="btn-capture" id="btnCapture" title="Capturar"></button>
+      <button class="btn-secondary" id="btnSwitch" title="Cambiar camara">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 7l-4-4m4 4l-4 4m4-4H9a5 5 0 000 10h1"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="result-panel" id="resultPanel">
+      <div class="result-handle"></div>
+      <div id="resultContent"></div>
+    </div>
+
+    <div class="history-panel" id="historyPanel">
+      <div class="result-handle"></div>
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;">Hoy</h2>
+      <div id="historyContent"></div>
+      <button class="btn-close" id="btnCloseHistory" style="margin-top:16px;">Cerrar</button>
+    </div>
+  </div>
+
+<script>
+(function() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const placeholder = document.getElementById('placeholder');
+  const crosshair = document.getElementById('crosshair');
+  const btnCapture = document.getElementById('btnCapture');
+  const btnHistory = document.getElementById('btnHistory');
+  const btnSwitch = document.getElementById('btnSwitch');
+  const resultPanel = document.getElementById('resultPanel');
+  const resultContent = document.getElementById('resultContent');
+  const historyPanel = document.getElementById('historyPanel');
+  const historyContent = document.getElementById('historyContent');
+  const btnCloseHistory = document.getElementById('btnCloseHistory');
+  const todayBadge = document.getElementById('todayBadge');
+  const todayTotal = document.getElementById('todayTotal');
+
+  let stream = null;
+  let facingMode = 'environment';
+  let isProcessing = false;
+
+  // Simple food database (calories per 100g)
+  const FOOD_DB = {
+    'arroz': { cal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4, serving: '1 taza (185g)' },
+    'pollo': { cal: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0, serving: '1 pechuga (170g)' },
+    'huevo': { cal: 155, protein: 13, carbs: 1.1, fat: 11, fiber: 0, serving: '1 huevo grande' },
+    'pasta': { cal: 131, protein: 5, carbs: 25, fat: 1.1, fiber: 1.8, serving: '1 taza cocida (140g)' },
+    'ensalada': { cal: 20, protein: 1.5, carbs: 3.5, fat: 0.2, fiber: 1.2, serving: '1 taza (85g)' },
+    'pan': { cal: 265, protein: 9, carbs: 49, fat: 3.2, fiber: 2.7, serving: '1 rebanada (30g)' },
+    'leche': { cal: 61, protein: 3.2, carbs: 4.8, fat: 3.3, fiber: 0, serving: '1 vaso (250ml)' },
+    'manzana': { cal: 52, protein: 0.3, carbs: 14, fat: 0.2, fiber: 2.4, serving: '1 fruta mediana (180g)' },
+    'banana': { cal: 89, protein: 1.1, carbs: 23, fat: 0.3, fiber: 2.6, serving: '1 fruta (120g)' },
+    'atun': { cal: 132, protein: 28, carbs: 0, fat: 1.3, fiber: 0, serving: '1 lata (140g)' },
+    'sopa': { cal: 50, protein: 3, carbs: 8, fat: 1, fiber: 1.5, serving: '1 taza (240ml)' },
+    'pizza': { cal: 266, protein: 11, carbs: 33, fat: 10, fiber: 2.3, serving: '2 rebanadas (200g)' },
+    'hamburguesa': { cal: 295, protein: 17, carbs: 24, fat: 14, fiber: 1, serving: '1 unidades (200g)' },
+    'tacos': { cal: 226, protein: 9, carbs: 20, fat: 12, fiber: 2, serving: '2 piezas (180g)' },
+    'tortilla': { cal: 218, protein: 5.7, carbs: 44, fat: 2.8, fiber: 2.8, serving: '1 pieza (48g)' },
+    'frijoles': { cal: 127, protein: 8.7, carbs: 22.8, fat: 0.5, fiber: 6.4, serving: '1/2 taza (86g)' },
+    'aguacate': { cal: 160, protein: 2, carbs: 9, fat: 15, fiber: 7, serving: '1/2 fruta (100g)' },
+    'salmón': { cal: 208, protein: 20, carbs: 0, fat: 13, fiber: 0, serving: '1 filete (170g)' },
+    'carne': { cal: 250, protein: 26, carbs: 0, fat: 15, fiber: 0, serving: '1 porcion (200g)' },
+    'cerveza': { cal: 43, protein: 0.5, carbs: 3.6, fat: 0, fiber: 0, serving: '1 lata (355ml)' },
+    'cafe': { cal: 2, protein: 0.3, carbs: 0, fat: 0, fiber: 0, serving: '1 taza (240ml)' },
+    'jugo': { cal: 45, protein: 0.7, carbs: 11, fat: 0.2, fiber: 0.2, serving: '1 vaso (250ml)' },
+    'yogur': { cal: 59, protein: 3.5, carbs: 4.7, fat: 3.3, fiber: 0, serving: '1 envase (150g)' },
+    'queso': { cal: 402, protein: 25, carbs: 1.3, fat: 33, fiber: 0, serving: '1 rebanada (28g)' },
+    'chocolate': { cal: 546, protein: 5, carbs: 60, fat: 31, fiber: 7, serving: '1 barra (100g)' },
+    'helado': { cal: 207, protein: 3.5, carbs: 24, fat: 11, fiber: 0.7, serving: '1 bola (100g)' },
+    'cereal': { cal: 379, protein: 6.5, carbs: 84, fat: 1, fiber: 3, serving: '1 taza (30g)' },
+    'papa': { cal: 77, protein: 2, carbs: 17, fat: 0.1, fiber: 2.2, serving: '1 mediana (150g)' },
+    'camote': { cal: 86, protein: 1.6, carbs: 20, fat: 0.1, fiber: 3, serving: '1 mediana (130g)' },
+    'lechuga': { cal: 15, protein: 1.4, carbs: 2.9, fat: 0.2, fiber: 1.3, serving: '1 taza (70g)' },
+    'tomate': { cal: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2, serving: '1 mediano (120g)' },
+    'cebolla': { cal: 40, protein: 1.1, carbs: 9.3, fat: 0.1, fiber: 1.7, serving: '1 mediana (110g)' },
+    'chile': { cal: 40, protein: 2, carbs: 8.8, fat: 0.4, fiber: 1.5, serving: '1 pieza (45g)' },
+    'limon': { cal: 29, protein: 1.1, carbs: 9.3, fat: 0.3, fiber: 2.8, serving: '1 fruta (60g)' },
+    'maiz': { cal: 86, protein: 3.3, carbs: 19, fat: 1.2, fiber: 2, serving: '1/2 taza (80g)' },
+    'aceite': { cal: 884, protein: 0, carbs: 0, fat: 100, fiber: 0, serving: '1 cda (14ml)' },
+    'azucar': { cal: 387, protein: 0, carbs: 100, fat: 0, fiber: 0, serving: '1 cda (12g)' },
+    'mantequilla': { cal: 717, protein: 0.9, carbs: 0.1, fat: 81, fiber: 0, serving: '1 cda (14g)' },
+  };
+
+  const FOOD_KEYWORDS = Object.keys(FOOD_DB);
+
+  // Calorie estimation from dominant colors
+  function estimateFromImage(imageData) {
+    const data = imageData.data;
+    let totalPixels = data.length / 4;
+    let r = 0, g = 0, b = 0;
+    let brightness = 0;
+
+    for (let i = 0; i < data.length; i += 16) {
+      r += data[i];
+      g += data[i+1];
+      b += data[i+2];
+      brightness += (data[i] + data[i+1] + data[i+2]) / 3;
+    }
+
+    const samples = totalPixels / 4;
+    r = r / samples;
+    g = g / samples;
+    b = b / samples;
+    brightness = brightness / samples;
+
+    const guesses = [];
+
+    if (brightness > 180 && r > 200 && g > 180) {
+      guesses.push('arroz', 'pan', 'tortilla');
+    } else if (r > 160 && g < 100 && b < 80) {
+      guesses.push('carne', 'pollo', 'hamburguesa');
+    } else if (g > 120 && r < 100) {
+      guesses.push('ensalada', 'lechuga', 'brócoli');
+    } else if (r > 150 && g > 100 && b < 80) {
+      guesses.push('pasta', 'pizza', 'tacos');
+    } else if (r > 180 && g > 150 && b < 100) {
+      guesses.push('papa', 'papa frita', 'camote');
+    } else if (r < 80 && g < 80 && b < 80) {
+      guesses.push('café', 'chocolate');
+    } else if (r > 200 && g > 180 && b > 150) {
+      guesses.push('huevo', 'queso', 'yogur');
+    } else {
+      const keys = FOOD_KEYWORDS;
+      guesses.push(keys[Math.floor(Math.random() * 5)]);
+    }
+
+    return guesses.slice(0, 3);
+  }
+
+  async function initCamera() {
+    try {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+      }
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      video.style.display = 'block';
+      placeholder.style.display = 'none';
+      crosshair.classList.remove('hidden');
+    } catch (e) {
+      console.error(e);
+      placeholder.querySelector('span').textContent = 'Sin acceso a la camara';
+    }
+  }
+
+  function capture() {
+    if (isProcessing) return;
+    isProcessing = true;
+    btnCapture.classList.add('processing');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const guesses = estimateFromImage(imageData);
+
+    showLoading();
+
+    setTimeout(() => {
+      showResult(guesses);
+      isProcessing = false;
+      btnCapture.classList.remove('processing');
+    }, 1500);
+  }
+
+  function showLoading() {
+    resultContent.innerHTML = `
+      <div class="spinner"></div>
+      <div class="loading-text">Analizando tu comida...</div>
+    `;
+    resultPanel.classList.add('open');
+  }
+
+  function showResult(guesses) {
+    const primary = guesses[0];
+    const food = FOOD_DB[primary] || FOOD_DB['ensalada'];
+
+    const calories = food.cal;
+    const protein = food.protein;
+    const carbs = food.carbs;
+    const fat = food.fat;
+    const fiber = food.fiber;
+
+    resultContent.innerHTML = `
+      <div class="result-food">${capitalize(primary)}</div>
+      <div class="result-serving">${food.serving} estimada</div>
+      <div class="macro-grid">
+        <div class="macro-card cal">
+          <div class="value">${calories}</div>
+          <div class="label">kcal</div>
+        </div>
+        <div class="macro-card protein">
+          <div class="value">${protein}g</div>
+          <div class="label">proteina</div>
+        </div>
+        <div class="macro-card carbs">
+          <div class="value">${carbs}g</div>
+          <div class="label">carbos</div>
+        </div>
+      </div>
+      <ul class="detail-list">
+        <li><span>Grasas</span><span class="dl">${fat}g</span></li>
+        <li><span>Fibra</span><span class="dl">${fiber}g</span></li>
+        <li><span>Opciones similares</span><span class="dl">${guesses.map(g => capitalize(g)).join(', ')}</span></li>
+      </ul>
+      <button class="btn-new" id="btnNew">Nueva foto</button>
+      <button class="btn-close" id="btnDismiss">Cerrar</button>
+    `;
+
+    document.getElementById('btnNew').addEventListener('click', () => {
+      resultPanel.classList.remove('open');
+      video.style.display = 'block';
+      crosshair.classList.remove('hidden');
+      placeholder.style.display = 'none';
+    });
+
+    document.getElementById('btnDismiss').addEventListener('click', () => {
+      resultPanel.classList.remove('open');
+    });
+
+    saveToHistory(primary, calories);
+  }
+
+  function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // History using localStorage
+  function getHistory() {
+    const today = new Date().toISOString().split('T')[0];
+    const data = JSON.parse(localStorage.getItem('caloria_history') || '{}');
+    return data[today] || [];
+  }
+
+  function saveToHistory(food, cal) {
+    const today = new Date().toISOString().split('T')[0];
+    const data = JSON.parse(localStorage.getItem('caloria_history') || '{}');
+    if (!data[today]) data[today] = [];
+    data[today].push({
+      food,
+      cal,
+      time: new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+    });
+    localStorage.setItem('caloria_history', JSON.stringify(data));
+    updateTodayTotal();
+  }
+
+  function updateTodayTotal() {
+    const items = getHistory();
+    const total = items.reduce((sum, i) => sum + i.cal, 0);
+    if (items.length > 0) {
+      todayBadge.style.display = 'flex';
+      todayTotal.textContent = `${total} kcal hoy`;
+    }
+  }
+
+  function showHistory() {
+    const items = getHistory();
+    if (items.length === 0) {
+      historyContent.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 8v4l3 3"/>
+            <circle cx="12" cy="12" r="9"/>
+          </svg>
+          <p>Sin registros hoy</p>
+        </div>
+      `;
+    } else {
+      const total = items.reduce((sum, i) => sum + i.cal, 0);
+      historyContent.innerHTML = items.map(i => `
+        <div class="history-item">
+          <div>
+            <div class="hi-name">${capitalize(i.food)}</div>
+            <div class="hi-time">${i.time}</div>
+          </div>
+          <div class="hi-cal">${i.cal}</div>
+        </div>
+      `).join('') + `
+        <div class="history-item" style="border-bottom:none;border-top:2px solid var(--separator);padding-top:16px;margin-top:4px;">
+          <div class="hi-name" style="font-size:17px;">Total</div>
+          <div class="hi-cal" style="font-size:22px;">${total} kcal</div>
+        </div>
+      `;
+    }
+    historyPanel.classList.add('open');
+  }
+
+  // Event listeners
+  placeholder.addEventListener('click', initCamera);
+
+  btnCapture.addEventListener('click', () => {
+    if (!stream) {
+      initCamera().then(() => setTimeout(capture, 500));
+    } else {
+      capture();
+    }
+  });
+
+  btnSwitch.addEventListener('click', () => {
+    facingMode = facingMode === 'environment' ? 'user' : 'environment';
+    initCamera();
+  });
+
+  btnHistory.addEventListener('click', showHistory);
+  btnCloseHistory.addEventListener('click', () => historyPanel.classList.remove('open'));
+
+  // Close panels on swipe down
+  [resultPanel, historyPanel].forEach(panel => {
+    let startY = 0;
+    panel.addEventListener('touchstart', e => { startY = e.touches[0].clientY; });
+    panel.addEventListener('touchend', e => {
+      if (e.changedTouches[0].clientY - startY > 80) {
+        panel.classList.remove('open');
+      }
+    });
+  });
+
+  // Update total on load
+  updateTodayTotal();
+})();
+</script>
+</body>
+</html>
