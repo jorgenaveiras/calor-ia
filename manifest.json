@@ -2,7 +2,7 @@
   "name": "CalorIA",
   "short_name": "CalorIA",
   "description": "Cuenta tus calorias fotografiando tu comida",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
