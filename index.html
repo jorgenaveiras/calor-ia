@@ -198,7 +198,10 @@
 
   /* ===== ELEMENTS ===== */
   const $ = id => document.getElementById(id);
-  const video = $('video'), canvas = $('canvas'), ctx = canvas.getContext('2d');
+  const video = $('video');
+  let canvas = $('canvas');
+  if (!canvas) { canvas = document.createElement('canvas'); canvas.style.display = 'none'; document.body.appendChild(canvas); }
+  const ctx = canvas.getContext('2d');
   const ph = $('ph'), xhair = $('xhair');
   const btnSnap = $('btnSnap'), btnFlip = $('btnFlip'), btnHist = $('btnHist');
   const screenCam = $('screenCam'), screenPick = $('screenPick'), screenDet = $('screenDet'), screenHist = $('screenHist');
