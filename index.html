@@ -12,743 +12,507 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="icon" href="icon-192.png">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
     :root {
-      --bg: #000;
-      --card: #1c1c1e;
-      --text: #fff;
-      --text-secondary: #8e8e93;
-      --accent: #30d158;
-      --accent-dim: rgba(48, 209, 88, 0.15);
-      --danger: #ff453a;
-      --separator: rgba(255,255,255,0.08);
+      --bg: #000; --card: #1c1c1e; --text: #fff; --text2: #8e8e93;
+      --accent: #30d158; --accent-dim: rgba(48,209,88,0.15);
+      --blue: #5e9eff; --yellow: #ffd60a; --orange: #ff9f0a; --red: #ff453a;
+      --sep: rgba(255,255,255,0.08);
       --safe-top: env(safe-area-inset-top, 20px);
       --safe-bottom: env(safe-area-inset-bottom, 20px);
     }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-      overflow: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
+    /* ===== SCREENS ===== */
+    .screen { position: absolute; inset: 0; display: flex; flex-direction: column; transition: transform 0.35s cubic-bezier(0.32,0.72,0,1); }
+    .screen.hidden { transform: translateX(100%); pointer-events: none; }
+    .screen.hidden-left { transform: translateX(-100%); pointer-events: none; }
 
-    .app {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-    }
+    /* ===== HEADER ===== */
+    .hdr { padding: calc(var(--safe-top) + 8px) 20px 12px; text-align: center; flex-shrink: 0; }
+    .hdr h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+    .hdr h1 span { color: var(--accent); }
+    .hdr p { font-size: 13px; color: var(--text2); margin-top: 2px; }
 
-    /* Header */
-    .header {
-      padding: calc(var(--safe-top) + 12px) 24px 16px;
-      text-align: center;
-      position: relative;
-      z-index: 10;
-    }
-    .header h1 {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-    .header h1 span { color: var(--accent); }
-    .header p {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-
-    /* Camera area */
-    .camera-container {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      border-radius: 24px;
-      margin: 0 16px;
-      background: var(--card);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 24px;
-    }
-
+    /* ===== CAMERA SCREEN ===== */
+    .cam-wrap { flex: 1; margin: 0 14px; border-radius: 22px; overflow: hidden; background: var(--card); display: flex; align-items: center; justify-content: center; position: relative; }
+    #video { width: 100%; height: 100%; object-fit: cover; border-radius: 22px; display: none; }
     #canvas { display: none; }
+    .ph { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--text2); }
+    .ph svg { width: 44px; height: 44px; opacity: 0.35; }
+    .ph span { font-size: 14px; font-weight: 500; }
+    .xhair { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 180px; height: 180px; pointer-events: none; z-index: 5; opacity: 0.4; transition: opacity 0.3s; }
+    .xhair.off { opacity: 0; }
+    .xhair::before, .xhair::after { content:''; position: absolute; background: rgba(255,255,255,0.5); border-radius: 2px; }
+    .xhair::before { width: 1px; height: 100%; left: 50%; }
+    .xhair::after { width: 100%; height: 1px; top: 50%; }
 
-    .camera-placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      color: var(--text-secondary);
-    }
-    .camera-placeholder svg {
-      width: 48px;
-      height: 48px;
-      opacity: 0.4;
-    }
-    .camera-placeholder span {
-      font-size: 14px;
-      font-weight: 500;
-    }
+    .ctrls { padding: 16px 16px calc(var(--safe-bottom) + 14px); display: flex; align-items: center; justify-content: center; gap: 28px; flex-shrink: 0; }
+    .cam-btn { width: 68px; height: 68px; border-radius: 50%; border: 4px solid #fff; background: transparent; cursor: pointer; position: relative; flex-shrink: 0; transition: all 0.15s; }
+    .cam-btn::after { content:''; position: absolute; inset: 4px; border-radius: 50%; background: #fff; transition: all 0.15s; }
+    .cam-btn:active { transform: scale(0.92); }
+    .cam-btn:active::after { background: #bbb; }
+    .sm-btn { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--card); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+    .sm-btn:active { transform: scale(0.9); }
+    .sm-btn svg { width: 20px; height: 20px; }
 
-    /* Overlay crosshair */
-    .crosshair {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 200px;
-      pointer-events: none;
-      z-index: 5;
-      opacity: 0.5;
-      transition: opacity 0.3s;
-    }
-    .crosshair.hidden { opacity: 0; }
-    .crosshair::before, .crosshair::after {
-      content: '';
-      position: absolute;
-      border-radius: 2px;
-      background: rgba(255,255,255,0.6);
-    }
-    .crosshair::before { width: 1px; height: 100%; left: 50%; }
-    .crosshair::after { width: 100%; height: 1px; top: 50%; }
+    /* Today badge */
+    .badge { position: absolute; top: 0; right: 14px; background: var(--card); border-radius: 14px; padding: 6px 12px; display: flex; align-items: center; gap: 5px; z-index: 10; font-size: 12px; font-weight: 600; color: var(--accent); }
 
-    /* Bottom controls */
-    .controls {
-      padding: 20px 16px calc(var(--safe-bottom) + 16px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 32px;
-    }
+    /* ===== FOOD PICKER SCREEN ===== */
+    .pick-wrap { flex: 1; overflow-y: auto; padding: 0 14px 20px; -webkit-overflow-scrolling: touch; }
+    .photo-thumb { width: 100%; height: 160px; border-radius: 18px; object-fit: cover; background: var(--card); }
+    .cat-label { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin: 18px 0 8px; }
+    .food-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .food-card { background: var(--card); border-radius: 16px; padding: 12px 6px; text-align: center; cursor: pointer; transition: transform 0.12s, background 0.12s; border: 2px solid transparent; }
+    .food-card:active { transform: scale(0.95); background: #2c2c2e; }
+    .food-card .emoji { font-size: 28px; line-height: 1.2; }
+    .food-card .fname { font-size: 12px; font-weight: 600; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .food-card .fcal { font-size: 11px; color: var(--accent); font-weight: 500; margin-top: 2px; }
 
-    .btn-capture {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      border: 4px solid #fff;
-      background: transparent;
-      cursor: pointer;
-      position: relative;
-      transition: all 0.15s ease;
-      flex-shrink: 0;
-    }
-    .btn-capture::after {
-      content: '';
-      position: absolute;
-      inset: 4px;
-      border-radius: 50%;
-      background: #fff;
-      transition: all 0.15s ease;
-    }
-    .btn-capture:active { transform: scale(0.92); }
-    .btn-capture:active::after { background: #ccc; }
-    .btn-capture.processing {
-      border-color: var(--accent);
-    }
-    .btn-capture.processing::after {
-      background: var(--accent);
-      animation: pulse 1s ease infinite;
-    }
+    /* Search bar */
+    .search-bar { width: 100%; padding: 10px 14px; border-radius: 12px; border: none; background: var(--card); color: var(--text); font-size: 15px; font-family: inherit; margin-bottom: 4px; outline: none; }
+    .search-bar::placeholder { color: var(--text2); }
 
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(0.85); opacity: 0.7; }
-    }
+    /* Back button */
+    .back-btn { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-size: 15px; font-weight: 600; background: none; border: none; cursor: pointer; padding: 8px 0; margin-bottom: 4px; }
+    .back-btn svg { width: 18px; height: 18px; }
 
-    .btn-secondary {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: none;
-      background: var(--card);
-      color: var(--text);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.15s;
-    }
-    .btn-secondary:active { transform: scale(0.9); }
-    .btn-secondary svg { width: 22px; height: 22px; }
+    /* ===== DETAIL SCREEN ===== */
+    .det-wrap { flex: 1; overflow-y: auto; padding: 0 20px 30px; -webkit-overflow-scrolling: touch; }
+    .det-photo { width: 100%; height: 180px; border-radius: 18px; object-fit: cover; background: var(--card); margin-bottom: 16px; }
+    .det-name { font-size: 24px; font-weight: 700; }
+    .det-serving { font-size: 13px; color: var(--text2); margin-top: 2px; margin-bottom: 16px; }
 
-    /* Result panel */
-    .result-panel {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--card);
-      border-radius: 24px 24px 0 0;
-      padding: 20px 24px calc(var(--safe-bottom) + 20px);
-      transform: translateY(100%);
-      transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-      z-index: 20;
-      max-height: 70vh;
-      overflow-y: auto;
-    }
-    .result-panel.open { transform: translateY(0); }
+    /* Serving adjuster */
+    .srv-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px; }
+    .srv-btn { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--sep); background: var(--card); color: var(--text); font-size: 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+    .srv-btn:active { background: var(--accent); border-color: var(--accent); color: #000; }
+    .srv-val { font-size: 22px; font-weight: 700; min-width: 50px; text-align: center; }
+    .srv-label { font-size: 12px; color: var(--text2); text-align: center; }
 
-    .result-handle {
-      width: 36px;
-      height: 5px;
-      border-radius: 3px;
-      background: rgba(255,255,255,0.2);
-      margin: 0 auto 20px;
-    }
+    /* Macro cards */
+    .macro-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+    .mc { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 14px 8px; text-align: center; }
+    .mc .mv { font-size: 26px; font-weight: 700; }
+    .mc .ml { font-size: 11px; color: var(--text2); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .mc.c .mv { color: var(--accent); }
+    .mc.p .mv { color: var(--blue); }
+    .mc.cb .mv { color: var(--yellow); }
 
-    .result-food {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .result-serving {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-bottom: 20px;
-    }
+    /* Detail list */
+    .det-list { list-style: none; margin-bottom: 20px; }
+    .det-list li { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--sep); font-size: 14px; }
+    .det-list li:last-child { border-bottom: none; }
+    .det-list .dl { color: var(--text2); }
 
-    .macro-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .macro-card {
-      background: rgba(255,255,255,0.05);
-      border-radius: 16px;
-      padding: 14px 10px;
-      text-align: center;
-    }
-    .macro-card .value {
-      font-size: 24px;
-      font-weight: 700;
-    }
-    .macro-card .label {
-      font-size: 11px;
-      color: var(--text-secondary);
-      margin-top: 2px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .macro-card.cal .value { color: var(--accent); }
-    .macro-card.protein .value { color: #5e9eff; }
-    .macro-card.carbs .value { color: #ffd60a; }
+    /* Buttons */
+    .btn-main { width: 100%; padding: 14px; border-radius: 14px; border: none; background: var(--accent); color: #000; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 4px; transition: opacity 0.12s; }
+    .btn-main:active { opacity: 0.8; }
+    .btn-sec { width: 100%; padding: 14px; border-radius: 14px; border: none; background: rgba(255,255,255,0.08); color: var(--text); font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.12s; }
+    .btn-sec:active { background: rgba(255,255,255,0.14); }
 
-    .detail-list {
-      list-style: none;
-    }
-    .detail-list li {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--separator);
-      font-size: 14px;
-    }
-    .detail-list li:last-child { border-bottom: none; }
-    .detail-list .dl { color: var(--text-secondary); }
+    /* ===== HISTORY SCREEN ===== */
+    .hist-wrap { flex: 1; overflow-y: auto; padding: 0 20px 30px; -webkit-overflow-scrolling: touch; }
+    .hist-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--sep); }
+    .hist-item:last-child { border-bottom: none; }
+    .hist-item .hi-left .hi-name { font-weight: 600; font-size: 15px; }
+    .hist-item .hi-left .hi-time { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .hist-item .hi-cal { font-size: 18px; font-weight: 700; color: var(--accent); }
+    .hist-total { display: flex; justify-content: space-between; padding: 16px 0; border-top: 2px solid var(--sep); margin-top: 4px; }
+    .hist-total .ht-label { font-size: 17px; font-weight: 600; }
+    .hist-total .ht-val { font-size: 22px; font-weight: 700; color: var(--accent); }
+    .empty { text-align: center; padding: 50px 0; color: var(--text2); }
+    .empty svg { width: 36px; height: 36px; opacity: 0.25; margin-bottom: 10px; }
 
-    .btn-close {
-      width: 100%;
-      padding: 14px;
-      border-radius: 14px;
-      border: none;
-      background: rgba(255,255,255,0.1);
-      color: var(--text);
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: background 0.15s;
-    }
-    .btn-close:active { background: rgba(255,255,255,0.15); }
-
-    .btn-new {
-      width: 100%;
-      padding: 14px;
-      border-radius: 14px;
-      border: none;
-      background: var(--accent);
-      color: #000;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: opacity 0.15s;
-    }
-    .btn-new:active { opacity: 0.8; }
-
-    /* Loading spinner */
-    .spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid rgba(255,255,255,0.15);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 16px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .loading-text {
-      text-align: center;
-      color: var(--text-secondary);
-      font-size: 14px;
-    }
-
-    /* Today total */
-    .today-badge {
-      position: absolute;
-      top: 0;
-      right: 16px;
-      background: var(--card);
-      border-radius: 16px;
-      padding: 8px 14px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      z-index: 10;
-      font-size: 13px;
-      font-weight: 500;
-    }
-    .today-badge .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-    }
-
-    /* History */
-    .history-panel {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--card);
-      border-radius: 24px 24px 0 0;
-      padding: 20px 24px calc(var(--safe-bottom) + 20px);
-      transform: translateY(100%);
-      transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-      z-index: 20;
-      max-height: 70vh;
-      overflow-y: auto;
-    }
-    .history-panel.open { transform: translateY(0); }
-
-    .history-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px 0;
-      border-bottom: 1px solid var(--separator);
-    }
-    .history-item:last-child { border-bottom: none; }
-    .history-item .hi-name { font-weight: 600; font-size: 15px; }
-    .history-item .hi-time { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-    .history-item .hi-cal { font-size: 18px; font-weight: 700; color: var(--accent); }
-
-    .empty-state {
-      text-align: center;
-      padding: 40px 0;
-      color: var(--text-secondary);
-    }
-    .empty-state svg { width: 40px; height: 40px; opacity: 0.3; margin-bottom: 12px; }
+    .section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="header">
-      <h1>Calor<span>IA</span></h1>
-      <p>Toma una foto y cuenta tus calorias</p>
-    </div>
 
-    <div class="today-badge" id="todayBadge" style="display:none;">
-      <div class="dot"></div>
-      <span id="todayTotal">0 kcal hoy</span>
-    </div>
-
-    <div class="camera-container" id="cameraContainer">
-      <div class="camera-placeholder" id="placeholder">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 16a4 4 0 100-8 4 4 0 000 8z"/>
-          <path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z"/>
-        </svg>
-        <span>Pulsa para activar camara</span>
-      </div>
-      <video id="video" autoplay playsinline muted style="display:none;"></video>
-      <div class="crosshair hidden" id="crosshair"></div>
-    </div>
-
-    <canvas id="canvas"></canvas>
-
-    <div class="controls" id="controls">
-      <button class="btn-secondary" id="btnHistory" title="Historial">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 8v4l3 3"/>
-          <circle cx="12" cy="12" r="9"/>
-        </svg>
-      </button>
-      <button class="btn-capture" id="btnCapture" title="Capturar"></button>
-      <button class="btn-secondary" id="btnSwitch" title="Cambiar camara">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M20 7l-4-4m4 4l-4 4m4-4H9a5 5 0 000 10h1"/>
-        </svg>
-      </button>
-    </div>
-
-    <div class="result-panel" id="resultPanel">
-      <div class="result-handle"></div>
-      <div id="resultContent"></div>
-    </div>
-
-    <div class="history-panel" id="historyPanel">
-      <div class="result-handle"></div>
-      <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;">Hoy</h2>
-      <div id="historyContent"></div>
-      <button class="btn-close" id="btnCloseHistory" style="margin-top:16px;">Cerrar</button>
-    </div>
+<!-- ===== SCREEN 1: CAMERA ===== -->
+<div class="screen" id="screenCam">
+  <div class="hdr">
+    <h1>Calor<span>IA</span></h1>
+    <p>Fotografia tu comida</p>
   </div>
+  <div class="badge" id="badge" style="display:none">0 kcal hoy</div>
+  <div class="cam-wrap" id="camWrap">
+    <div class="ph" id="ph">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16a4 4 0 100-8 4 4 0 000 8z"/><path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z"/></svg>
+      <span>Pulsa para activar camara</span>
+    </div>
+    <video id="video" autoplay playsinline muted></video>
+    <div class="xhair off" id="xhair"></div>
+  </div>
+  <div class="ctrls">
+    <button class="sm-btn" id="btnHist" title="Historial">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+    </button>
+    <button class="cam-btn" id="btnSnap"></button>
+    <button class="sm-btn" id="btnFlip" title="Cambiar camara">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-4-4m4 4l-4 4m4-4H9a5 5 0 000 10h1"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 2: FOOD PICKER ===== -->
+<div class="screen hidden" id="screenPick">
+  <div class="hdr">
+    <button class="back-btn" id="btnBack1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 19l-7-7 7-7"/></svg> Volver</button>
+    <h1>Que comiste?</h1>
+    <p>Selecciona tu alimento</p>
+  </div>
+  <div class="pick-wrap" id="pickWrap"></div>
+</div>
+
+<!-- ===== SCREEN 3: DETAIL ===== -->
+<div class="screen hidden" id="screenDet">
+  <div class="hdr">
+    <button class="back-btn" id="btnBack2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 19l-7-7 7-7"/></svg> Volver</button>
+  </div>
+  <div class="det-wrap" id="detWrap"></div>
+</div>
+
+<!-- ===== SCREEN 4: HISTORY ===== -->
+<div class="screen hidden" id="screenHist">
+  <div class="hdr">
+    <button class="back-btn" id="btnBack3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 19l-7-7 7-7"/></svg> Volver</button>
+    <h1>Hoy</h1>
+    <p>Tu registro de hoy</p>
+  </div>
+  <div class="hist-wrap" id="histWrap"></div>
+</div>
 
 <script>
 (function() {
-  // Global error display (so failures are visible, e.g. when launched from home screen)
-  function showFatal(msg) {
-    let el = document.getElementById('fatalError');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'fatalError';
-      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:999;background:#ff453a;color:#fff;font:600 14px -apple-system,sans-serif;padding:14px 18px;text-align:center;';
-      document.body.appendChild(el);
-    }
-    el.textContent = 'Error: ' + msg;
+  /* ===== ERROR HANDLING ===== */
+  function showErr(m) {
+    let e = document.getElementById('fErr');
+    if (!e) { e = document.createElement('div'); e.id='fErr'; e.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:999;background:#ff453a;color:#fff;font:600 14px -apple-system,sans-serif;padding:14px;text-align:center;'; document.body.appendChild(e); }
+    e.textContent = 'Error: ' + m;
   }
-  window.addEventListener('error', function(e) {
-    showFatal((e && e.message) ? e.message : 'fallo inesperado');
-  });
-  window.addEventListener('unhandledrejection', function(e) {
-    showFatal((e && e.reason && e.reason.message) ? e.reason.message : 'promesa rechazada');
-  });
+  window.onerror = e => showErr(e || 'fallo');
+  window.onunhandledrejection = e => showErr(e.reason || 'fallo');
 
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  const placeholder = document.getElementById('placeholder');
-  const crosshair = document.getElementById('crosshair');
-  const btnCapture = document.getElementById('btnCapture');
-  const btnHistory = document.getElementById('btnHistory');
-  const btnSwitch = document.getElementById('btnSwitch');
-  const resultPanel = document.getElementById('resultPanel');
-  const resultContent = document.getElementById('resultContent');
-  const historyPanel = document.getElementById('historyPanel');
-  const historyContent = document.getElementById('historyContent');
-  const btnCloseHistory = document.getElementById('btnCloseHistory');
-  const todayBadge = document.getElementById('todayBadge');
-  const todayTotal = document.getElementById('todayTotal');
+  /* ===== ELEMENTS ===== */
+  const $ = id => document.getElementById(id);
+  const video = $('video'), canvas = $('canvas'), ctx = canvas.getContext('2d');
+  const ph = $('ph'), xhair = $('xhair');
+  const btnSnap = $('btnSnap'), btnFlip = $('btnFlip'), btnHist = $('btnHist');
+  const screenCam = $('screenCam'), screenPick = $('screenPick'), screenDet = $('screenDet'), screenHist = $('screenHist');
+  const pickWrap = $('pickWrap'), detWrap = $('detWrap'), histWrap = $('histWrap');
+  const badge = $('badge');
+  const btnBack1 = $('btnBack1'), btnBack2 = $('btnBack2'), btnBack3 = $('btnBack3');
 
-  let stream = null;
-  let facingMode = 'environment';
-  let isProcessing = false;
+  let stream = null, facingMode = 'environment', photoDataUrl = null;
 
-  // Simple food database (calories per 100g)
-  const FOOD_DB = {
-    'arroz': { cal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4, serving: '1 taza (185g)' },
-    'pollo': { cal: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0, serving: '1 pechuga (170g)' },
-    'huevo': { cal: 155, protein: 13, carbs: 1.1, fat: 11, fiber: 0, serving: '1 huevo grande' },
-    'pasta': { cal: 131, protein: 5, carbs: 25, fat: 1.1, fiber: 1.8, serving: '1 taza cocida (140g)' },
-    'ensalada': { cal: 20, protein: 1.5, carbs: 3.5, fat: 0.2, fiber: 1.2, serving: '1 taza (85g)' },
-    'pan': { cal: 265, protein: 9, carbs: 49, fat: 3.2, fiber: 2.7, serving: '1 rebanada (30g)' },
-    'leche': { cal: 61, protein: 3.2, carbs: 4.8, fat: 3.3, fiber: 0, serving: '1 vaso (250ml)' },
-    'manzana': { cal: 52, protein: 0.3, carbs: 14, fat: 0.2, fiber: 2.4, serving: '1 fruta mediana (180g)' },
-    'banana': { cal: 89, protein: 1.1, carbs: 23, fat: 0.3, fiber: 2.6, serving: '1 fruta (120g)' },
-    'atun': { cal: 132, protein: 28, carbs: 0, fat: 1.3, fiber: 0, serving: '1 lata (140g)' },
-    'sopa': { cal: 50, protein: 3, carbs: 8, fat: 1, fiber: 1.5, serving: '1 taza (240ml)' },
-    'pizza': { cal: 266, protein: 11, carbs: 33, fat: 10, fiber: 2.3, serving: '2 rebanadas (200g)' },
-    'hamburguesa': { cal: 295, protein: 17, carbs: 24, fat: 14, fiber: 1, serving: '1 unidades (200g)' },
-    'tacos': { cal: 226, protein: 9, carbs: 20, fat: 12, fiber: 2, serving: '2 piezas (180g)' },
-    'tortilla': { cal: 218, protein: 5.7, carbs: 44, fat: 2.8, fiber: 2.8, serving: '1 pieza (48g)' },
-    'frijoles': { cal: 127, protein: 8.7, carbs: 22.8, fat: 0.5, fiber: 6.4, serving: '1/2 taza (86g)' },
-    'aguacate': { cal: 160, protein: 2, carbs: 9, fat: 15, fiber: 7, serving: '1/2 fruta (100g)' },
-    'salmón': { cal: 208, protein: 20, carbs: 0, fat: 13, fiber: 0, serving: '1 filete (170g)' },
-    'carne': { cal: 250, protein: 26, carbs: 0, fat: 15, fiber: 0, serving: '1 porcion (200g)' },
-    'cerveza': { cal: 43, protein: 0.5, carbs: 3.6, fat: 0, fiber: 0, serving: '1 lata (355ml)' },
-    'cafe': { cal: 2, protein: 0.3, carbs: 0, fat: 0, fiber: 0, serving: '1 taza (240ml)' },
-    'jugo': { cal: 45, protein: 0.7, carbs: 11, fat: 0.2, fiber: 0.2, serving: '1 vaso (250ml)' },
-    'yogur': { cal: 59, protein: 3.5, carbs: 4.7, fat: 3.3, fiber: 0, serving: '1 envase (150g)' },
-    'queso': { cal: 402, protein: 25, carbs: 1.3, fat: 33, fiber: 0, serving: '1 rebanada (28g)' },
-    'chocolate': { cal: 546, protein: 5, carbs: 60, fat: 31, fiber: 7, serving: '1 barra (100g)' },
-    'helado': { cal: 207, protein: 3.5, carbs: 24, fat: 11, fiber: 0.7, serving: '1 bola (100g)' },
-    'cereal': { cal: 379, protein: 6.5, carbs: 84, fat: 1, fiber: 3, serving: '1 taza (30g)' },
-    'papa': { cal: 77, protein: 2, carbs: 17, fat: 0.1, fiber: 2.2, serving: '1 mediana (150g)' },
-    'camote': { cal: 86, protein: 1.6, carbs: 20, fat: 0.1, fiber: 3, serving: '1 mediana (130g)' },
-    'lechuga': { cal: 15, protein: 1.4, carbs: 2.9, fat: 0.2, fiber: 1.3, serving: '1 taza (70g)' },
-    'tomate': { cal: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2, serving: '1 mediano (120g)' },
-    'cebolla': { cal: 40, protein: 1.1, carbs: 9.3, fat: 0.1, fiber: 1.7, serving: '1 mediana (110g)' },
-    'chile': { cal: 40, protein: 2, carbs: 8.8, fat: 0.4, fiber: 1.5, serving: '1 pieza (45g)' },
-    'limon': { cal: 29, protein: 1.1, carbs: 9.3, fat: 0.3, fiber: 2.8, serving: '1 fruta (60g)' },
-    'maiz': { cal: 86, protein: 3.3, carbs: 19, fat: 1.2, fiber: 2, serving: '1/2 taza (80g)' },
-    'aceite': { cal: 884, protein: 0, carbs: 0, fat: 100, fiber: 0, serving: '1 cda (14ml)' },
-    'azucar': { cal: 387, protein: 0, carbs: 100, fat: 0, fiber: 0, serving: '1 cda (12g)' },
-    'mantequilla': { cal: 717, protein: 0.9, carbs: 0.1, fat: 81, fiber: 0, serving: '1 cda (14g)' },
-  };
+  /* ===== FOOD DATABASE (real USDA values per standard serving) ===== */
+  const FOODS = [
+    // Proteinas
+    { id:'pechuga-pollo', emoji:'🍗', name:'Pechuga de pollo', cat:'Proteinas', cal:284, p:53, c:0, f:6.2, fb:0, serving:'1 pieza (170g)' },
+    { id:'huevo', emoji:'🥚', name:'Huevo', cat:'Proteinas', cal:78, p:6, c:0.6, f:5, fb:0, serving:'1 huevo grande' },
+    { id:'salmon', emoji:'🐟', name:'Salmon', cat:'Proteinas', cal:354, p:34, c:0, f:22, fb:0, serving:'1 filete (170g)' },
+    { id:'atun', emoji:'🐟', name:'Atun enlatado', cat:'Proteinas', cal:184, p:40, c:0, f:1.3, fb:0, serving:'1 lata (140g)' },
+    { id:'carne-res', emoji:'🥩', name:'Carne de res', cat:'Proteinas', cal:500, p:52, c:0, f:30, fb:0, serving:'1 porcion (200g)' },
+    { id:'cerdo', emoji:'🥩', name:'Chuleta de cerdo', cat:'Proteinas', cal:340, p:30, c:0, f:24, fb:0, serving:'1 porcion (170g)' },
+    { id:'jamón', emoji:'🥓', name:'Jamon', cat:'Proteinas', cal:82, p:8.3, c:1.9, f:4.3, fb:0, serving:'2 rebanadas (56g)' },
+    { id:'tofu', emoji:'🧊', name:'Tofu', cat:'Proteinas', cal:144, p:17, c:3, f:8, fb:2, serving:'1 taza (252g)' },
 
-  const FOOD_KEYWORDS = Object.keys(FOOD_DB);
+    // Carbohidratos
+    { id:'arroz', emoji:'🍚', name:'Arroz blanco', cat:'Carbos', cal:242, p:4.4, c:53, f:0.4, fb:0.6, serving:'1 taza cocida (185g)' },
+    { id:'pasta', emoji:'🍝', name:'Pasta cocida', cat:'Carbos', cal:220, p:8, c:43, f:1.3, fb:2.5, serving:'1 taza (140g)' },
+    { id:'pan', emoji:'🍞', name:'Pan', cat:'Carbos', cal:79, p:2.7, c:15, f:1, fb:0.8, serving:'1 rebanada (30g)' },
+    { id:'tortilla', emoji:'🫓', name:'Tortilla de maiz', cat:'Carbos', cal:104, p:2.8, c:21, f:1.3, fb:2, serving:'1 pieza (48g)' },
+    { id:'papa', emoji:'🥔', name:'Papa cocida', cat:'Carbos', cal:116, p:3, c:26, f:0.2, fb:3.3, serving:'1 mediana (150g)' },
+    { id:'camote', emoji:'🍠', name:'Camote', cat:'Carbos', cal:112, p:2, c:26, f:0.1, fb:3.9, serving:'1 mediana (130g)' },
+    { id:'avena', emoji:'🥣', name:'Avena cocida', cat:'Carbos', cal:166, p:6, c:28, f:3.6, fb:4, serving:'1 taza (234g)' },
 
-  // Calorie estimation from dominant colors
-  function estimateFromImage(imageData) {
-    const data = imageData.data;
-    let totalPixels = data.length / 4;
-    let r = 0, g = 0, b = 0;
-    let brightness = 0;
+    // Vegetales
+    { id:'ensalada', emoji:'🥗', name:'Ensalada mixta', cat:'Vegetales', cal:15, p:1.3, c:2.9, f:0.1, fb:1.3, serving:'1 taza (70g)' },
+    { id:'brocoli', emoji:'🥦', name:'Brocoli', cat:'Vegetales', cal:55, p:3.7, c:11, f:0.6, fb:5.1, serving:'1 taza (156g)' },
+    { id:'zanahoria', emoji:'🥕', name:'Zanahoria', cat:'Vegetales', cal:52, p:1.2, c:12, f:0.3, fb:3.6, serving:'1 mediana (61g)' },
+    { id:'tomate', emoji:'🍅', name:'Tomate', cat:'Vegetales', cal:33, p:1.6, c:7, f:0.4, fb:2.2, serving:'1 mediano (182g)' },
+    { id:'espinaca', emoji:'🥬', name:'Espinaca', cat:'Vegetales', cal:23, p:2.9, c:3.6, f:0.4, fb:2.2, serving:'1 taza cruda (30g)' },
+    { id:'aguacate', emoji:'🥑', name:'Aguacate', cat:'Vegetales', cal:240, p:3, c:13, f:22, fb:10, serving:'1 entero (200g)' },
+    { id:'maiz', emoji:'🌽', name:'Elote', cat:'Vegetales', cal:123, p:4.6, c:27, f:1.7, fb:2.9, serving:'1 mediano (90g)' },
 
-    for (let i = 0; i < data.length; i += 16) {
-      r += data[i];
-      g += data[i+1];
-      b += data[i+2];
-      brightness += (data[i] + data[i+1] + data[i+2]) / 3;
-    }
+    // Frutas
+    { id:'manzana', emoji:'🍎', name:'Manzana', cat:'Frutas', cal:95, p:0.5, c:25, f:0.3, fb:4.4, serving:'1 mediana (182g)' },
+    { id:'banana', emoji:'🍌', name:'Banana', cat:'Frutas', cal:105, p:1.3, c:27, f:0.4, fb:3.1, serving:'1 mediana (118g)' },
+    { id:'naranja', emoji:'🍊', name:'Naranja', cat:'Frutas', cal:62, p:1.2, c:15, f:0.2, fb:3.1, serving:'1 mediana (131g)' },
+    { id:'uvas', emoji:'🍇', name:'Uvas', cat:'Frutas', cal:104, p:1.1, c:27, f:0.2, fb:1.4, serving:'1 taza (151g)' },
+    { id:'fresa', emoji:'🍓', name:'Fresas', cat:'Frutas', cal:49, p:1, c:12, f:0.5, fb:3, serving:'1 taza (144g)' },
+    { id:'sandia', emoji:'🍉', name:'Sandia', cat:'Frutas', cal:86, p:1.7, c:22, f:0.4, fb:1.1, serving:'1 taza (152g)' },
+    { id:'pera', emoji:'🍐', name:'Pera', cat:'Frutas', cal:101, p:0.6, c:27, f:0.2, fb:5.5, serving:'1 mediana (178g)' },
 
-    const samples = totalPixels / 4;
-    r = r / samples;
-    g = g / samples;
-    b = b / samples;
-    brightness = brightness / samples;
+    // Lacteos
+    { id:'leche', emoji:'🥛', name:'Leche', cat:'Lacteos', cal:149, p:8, c:12, f:8, fb:0, serving:'1 vaso (250ml)' },
+    { id:'yogur', emoji:'🥛', name:'Yogur natural', cat:'Lacteos', cal:100, p:5, c:17, f:2.6, fb:0, serving:'1 envase (150g)' },
+    { id:'queso', emoji:'🧀', name:'Queso', cat:'Lacteos', cal:113, p:7, c:0.4, f:9, fb:0, serving:'1 rebanada (28g)' },
+    { id:'queso-crema', emoji:'🧀', name:'Queso crema', cat:'Lacteos', cal:99, p:2.2, c:1.6, f:9.8, fb:0, serving:'2 cdas (30g)' },
 
-    const guesses = [];
+    // Comidas rapidas
+    { id:'pizza', emoji:'🍕', name:'Pizza', cat:'Comida rapida', cal:266, p:11, c:33, f:10, fb:2.3, serving:'2 rebanadas (200g)' },
+    { id:'hamburguesa', emoji:'🍔', name:'Hamburguesa', cat:'Comida rapida', cal:590, p:34, c:48, f:28, fb:3, serving:'1 completa (220g)' },
+    { id:'tacos', emoji:'🌮', name:'Tacos', cat:'Comida rapida', cal:204, p:9, c:18, f:11, fb:2, serving:'2 piezas (120g)' },
+    { id:'sushi', emoji:'🍣', name:'Sushi (6 pzas)', cat:'Comida rapida', cal:350, p:14, c:56, f:8, fb:2, serving:'6 piezas (200g)' },
+    { id:'hot-dog', emoji:'🌭', name:'Hot dog', cat:'Comida rapida', cal:290, p:10, c:25, f:16, fb:1, serving:'1 completo (150g)' },
+    { id:'nachos', emoji:'🧀', name:'Nachos con queso', cat:'Comida rapida', cal:340, p:8, c:38, f:18, fb:3, serving:'1 porcion (113g)' },
 
-    if (brightness > 180 && r > 200 && g > 180) {
-      guesses.push('arroz', 'pan', 'tortilla');
-    } else if (r > 160 && g < 100 && b < 80) {
-      guesses.push('carne', 'pollo', 'hamburguesa');
-    } else if (g > 120 && r < 100) {
-      guesses.push('ensalada', 'lechuga', 'brócoli');
-    } else if (r > 150 && g > 100 && b < 80) {
-      guesses.push('pasta', 'pizza', 'tacos');
-    } else if (r > 180 && g > 150 && b < 100) {
-      guesses.push('papa', 'papa frita', 'camote');
-    } else if (r < 80 && g < 80 && b < 80) {
-      guesses.push('café', 'chocolate');
-    } else if (r > 200 && g > 180 && b > 150) {
-      guesses.push('huevo', 'queso', 'yogur');
-    } else {
-      const keys = FOOD_KEYWORDS;
-      guesses.push(keys[Math.floor(Math.random() * 5)]);
-    }
+    // Bebidas
+    { id:'cafe-negro', emoji:'☕', name:'Cafe negro', cat:'Bebidas', cal:2, p:0.3, c:0, f:0, fb:0, serving:'1 taza (240ml)' },
+    { id:'cafe-leche', emoji:'☕', name:'Cafe con leche', cat:'Bebidas', cal:67, p:2.3, c:6.7, f:3.3, fb:0, serving:'1 taza (240ml)' },
+    { id:'jugo-naranja', emoji:'🧃', name:'Jugo de naranja', cat:'Bebidas', cal:112, p:1.7, c:26, f:0.5, fb:0.2, serving:'1 vaso (250ml)' },
+    { id:'coca-cola', emoji:'🥤', name:'Coca-Cola', cat:'Bebidas', cal:140, p:0, c:39, f:0, fb:0, serving:'1 lata (355ml)' },
+    { id:'cerveza', emoji:'🍺', name:'Cerveza', cat:'Bebidas', cal:153, p:1.3, c:13, f:0, fb:0, serving:'1 lata (355ml)' },
+    { id:'vino', emoji:'🍷', name:'Vino tinto', cat:'Bebidas', cal:125, p:0.1, c:3.8, f:0, fb:0, serving:'1 copa (150ml)' },
+    { id:'agua', emoji:'💧', name:'Agua', cat:'Bebidas', cal:0, p:0, c:0, f:0, fb:0, serving:'1 vaso (250ml)' },
 
-    return guesses.slice(0, 3);
+    // Snacks / Otros
+    { id:'chocolate', emoji:'🍫', name:'Chocolate', cat:'Snacks', cal:546, p:5, c:60, f:31, fb:7, serving:'1 barra (100g)' },
+    { id:'helado', emoji:'🍦', name:'Helado', cat:'Snacks', cal:207, p:3.5, c:24, f:11, fb:0.7, serving:'1 bola (100g)' },
+    { id:'galleta', emoji:'🍪', name:'Galleta', cat:'Snacks', cal:78, p:1, c:11, f:3.5, fb:0.5, serving:'1 galleta (14g)' },
+    { id:'papas-fritas', emoji:'🍟', name:'Papas fritas', cat:'Snacks', cal:365, p:4, c:48, f:18, fb:4, serving:'1 porcion (117g)' },
+    { id:'frijoles', emoji:'🫘', name:'Frijoles', cat:'Snacks', cal:227, p:15, c:41, f:0.9, fb:11.5, serving:'1 taza (172g)' },
+    { id:'nueces', emoji:'🥜', name:'Nueces', cat:'Snacks', cal:185, p:4.3, c:3.9, f:18, fb:1.9, serving:'1/4 taza (28g)' },
+  ];
+
+  /* ===== CATEGORIES (ordered) ===== */
+  const CATS = ['Proteinas','Carbos','Vegetales','Frutas','Lacteos','Comida rapida','Bebidas','Snacks'];
+
+  /* ===== STATE ===== */
+  let currentFood = null;
+  let currentMult = 1;
+
+  /* ===== NAV ===== */
+  function show(screen) {
+    [screenCam, screenPick, screenDet, screenHist].forEach(s => s.classList.add('hidden'));
+    screen.classList.remove('hidden');
+    screen.classList.remove('hidden-left');
   }
 
-  async function initCamera() {
+  /* ===== CAMERA ===== */
+  async function initCam() {
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('getUserMedia no disponible (usa Safari y HTTPS)');
-      }
-      if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-      }
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('getUserMedia no disponible');
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode, width:{ideal:1280}, height:{ideal:720} }, audio:false });
       video.srcObject = stream;
       video.style.display = 'block';
-      placeholder.style.display = 'none';
-      crosshair.classList.remove('hidden');
-    } catch (e) {
-      console.error(e);
-      placeholder.querySelector('span').textContent = 'Sin acceso a la camara';
-      showFatal('Camara: ' + (e && e.name ? e.name : 'bloqueada') + '. En el icono de inicio, borra y vuelve a agregar la app, y acepta camara.');
+      ph.style.display = 'none';
+      xhair.classList.remove('off');
+    } catch(e) {
+      ph.querySelector('span').textContent = 'Sin acceso a la camara';
+      showErr('Camara: ' + (e.name||'bloqueada'));
     }
   }
 
-  function capture() {
-    if (isProcessing) return;
-    isProcessing = true;
-    btnCapture.classList.add('processing');
-
+  function snap() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const guesses = estimateFromImage(imageData);
-
-    showLoading();
-
-    setTimeout(() => {
-      showResult(guesses);
-      isProcessing = false;
-      btnCapture.classList.remove('processing');
-    }, 1500);
+    photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    showPicker();
   }
 
-  function showLoading() {
-    resultContent.innerHTML = `
-      <div class="spinner"></div>
-      <div class="loading-text">Analizando tu comida...</div>
-    `;
-    resultPanel.classList.add('open');
+  /* ===== FOOD PICKER ===== */
+  function showPicker() {
+    show(screenPick);
+    renderFoodGrid('');
   }
 
-  function showResult(guesses) {
-    const primary = guesses[0];
-    const food = FOOD_DB[primary] || FOOD_DB['ensalada'];
+  function renderFoodGrid(query) {
+    const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    let html = '';
+    if (photoDataUrl) html += '<img class="photo-thumb" src="' + photoDataUrl + '" alt="foto">';
+    html += '<input class="search-bar" id="searchInput" type="search" placeholder="Buscar alimento..." value="' + query + '">';
+    html += '<div style="height:12px"></div>';
 
-    const calories = food.cal;
-    const protein = food.protein;
-    const carbs = food.carbs;
-    const fat = food.fat;
-    const fiber = food.fiber;
+    CATS.forEach(cat => {
+      const foods = FOODS.filter(f => {
+        if (f.cat !== cat) return false;
+        if (!q) return true;
+        return f.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(q) || f.cat.toLowerCase().includes(q);
+      });
+      if (foods.length === 0) return;
+      html += '<div class="cat-label">' + cat + '</div>';
+      html += '<div class="food-grid">';
+      foods.forEach(f => {
+        html += '<div class="food-card" data-id="' + f.id + '">';
+        html += '<div class="emoji">' + f.emoji + '</div>';
+        html += '<div class="fname">' + f.name + '</div>';
+        html += '<div class="fcal">' + f.cal + ' kcal</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
 
-    resultContent.innerHTML = `
-      <div class="result-food">${capitalize(primary)}</div>
-      <div class="result-serving">${food.serving} estimada</div>
-      <div class="macro-grid">
-        <div class="macro-card cal">
-          <div class="value">${calories}</div>
-          <div class="label">kcal</div>
-        </div>
-        <div class="macro-card protein">
-          <div class="value">${protein}g</div>
-          <div class="label">proteina</div>
-        </div>
-        <div class="macro-card carbs">
-          <div class="value">${carbs}g</div>
-          <div class="label">carbos</div>
-        </div>
-      </div>
-      <ul class="detail-list">
-        <li><span>Grasas</span><span class="dl">${fat}g</span></li>
-        <li><span>Fibra</span><span class="dl">${fiber}g</span></li>
-        <li><span>Opciones similares</span><span class="dl">${guesses.map(g => capitalize(g)).join(', ')}</span></li>
-      </ul>
-      <button class="btn-new" id="btnNew">Nueva foto</button>
-      <button class="btn-close" id="btnDismiss">Cerrar</button>
-    `;
+    pickWrap.innerHTML = html;
 
-    document.getElementById('btnNew').addEventListener('click', () => {
-      resultPanel.classList.remove('open');
+    // Search handler
+    const input = $('searchInput');
+    let debounce;
+    input.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => renderFoodGrid(input.value), 200);
+    });
+    input.focus();
+
+    // Food card handlers
+    pickWrap.querySelectorAll('.food-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const food = FOODS.find(f => f.id === card.dataset.id);
+        if (food) showDetail(food);
+      });
+    });
+  }
+
+  /* ===== DETAIL ===== */
+  function showDetail(food) {
+    currentFood = food;
+    currentMult = 1;
+    show(screenDet);
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const f = currentFood;
+    const m = currentMult;
+    const cal = Math.round(f.cal * m);
+    const p = (f.p * m).toFixed(1);
+    const c = (f.c * m).toFixed(1);
+    const fat = (f.f * m).toFixed(1);
+    const fb = (f.fb * m).toFixed(1);
+
+    let html = '';
+    if (photoDataUrl) html += '<img class="det-photo" src="' + photoDataUrl + '">';
+    html += '<div class="det-name">' + f.emoji + ' ' + f.name + '</div>';
+    html += '<div class="det-serving">' + f.serving + '</div>';
+
+    // Serving adjuster
+    html += '<div class="srv-row">';
+    html += '<div><div class="srv-btn" id="srvMinus">-</div></div>';
+    html += '<div><div class="srv-val" id="srvVal">' + m + 'x</div><div class="srv-label">porcion</div></div>';
+    html += '<div><div class="srv-btn" id="srvPlus">+</div></div>';
+    html += '</div>';
+
+    // Quick mult buttons
+    html += '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;">';
+    [0.5, 1, 1.5, 2, 3].forEach(v => {
+      const active = m === v ? 'background:var(--accent);color:#000;border-color:var(--accent);' : '';
+      html += '<button class="srv-btn" style="width:44px;height:36px;border-radius:10px;font-size:14px;' + active + '" data-mult="' + v + '">' + v + 'x</button>';
+    });
+    html += '</div>';
+
+    // Macros
+    html += '<div class="macro-row">';
+    html += '<div class="mc c"><div class="mv">' + cal + '</div><div class="ml">kcal</div></div>';
+    html += '<div class="mc p"><div class="mv">' + p + 'g</div><div class="ml">proteina</div></div>';
+    html += '<div class="mc cb"><div class="mv">' + c + 'g</div><div class="ml">carbos</div></div>';
+    html += '</div>';
+
+    // Detail list
+    html += '<ul class="det-list">';
+    html += '<li><span>Grasas</span><span class="dl">' + fat + 'g</span></li>';
+    html += '<li><span>Fibra</span><span class="dl">' + fb + 'g</span></li>';
+    html += '<li><span>Porcion base</span><span class="dl">' + f.serving + '</span></li>';
+    html += '</ul>';
+
+    // Save button
+    html += '<button class="btn-main" id="btnSave">Guardar ' + cal + ' kcal</button>';
+    html += '<button class="btn-sec" id="btnBackDet">Elegir otro alimento</button>';
+
+    detWrap.innerHTML = html;
+
+    // Handlers
+    $('srvMinus').addEventListener('click', () => { if (currentMult > 0.5) { currentMult = Math.round((currentMult - 0.5) * 10) / 10; renderDetail(); } });
+    $('srvPlus').addEventListener('click', () => { if (currentMult < 10) { currentMult = Math.round((currentMult + 0.5) * 10) / 10; renderDetail(); } });
+    detWrap.querySelectorAll('[data-mult]').forEach(b => {
+      b.addEventListener('click', () => { currentMult = parseFloat(b.dataset.mult); renderDetail(); });
+    });
+    $('btnSave').addEventListener('click', () => {
+      saveToHistory(f, currentMult);
+      show(screenCam);
       video.style.display = 'block';
-      crosshair.classList.remove('hidden');
-      placeholder.style.display = 'none';
+      ph.style.display = 'none';
+      xhair.classList.remove('off');
     });
-
-    document.getElementById('btnDismiss').addEventListener('click', () => {
-      resultPanel.classList.remove('open');
-    });
-
-    saveToHistory(primary, calories);
+    $('btnBackDet').addEventListener('click', () => show(screenPick));
   }
 
-  function capitalize(s) {
-    return s.charAt(0).toUpperCase() + s.slice(1);
-  }
-
-  // History using localStorage
+  /* ===== HISTORY ===== */
   function getHistory() {
     const today = new Date().toISOString().split('T')[0];
-    const data = JSON.parse(localStorage.getItem('caloria_history') || '{}');
-    return data[today] || [];
+    return JSON.parse(localStorage.getItem('caloria_history') || '{}')[today] || [];
   }
 
-  function saveToHistory(food, cal) {
+  function saveToHistory(food, mult) {
     const today = new Date().toISOString().split('T')[0];
     const data = JSON.parse(localStorage.getItem('caloria_history') || '{}');
     if (!data[today]) data[today] = [];
     data[today].push({
-      food,
-      cal,
-      time: new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+      id: food.id,
+      name: food.name,
+      emoji: food.emoji,
+      cal: Math.round(food.cal * mult),
+      p: +(food.p * mult).toFixed(1),
+      c: +(food.c * mult).toFixed(1),
+      f: +(food.f * mult).toFixed(1),
+      mult: mult,
+      time: new Date().toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' })
     });
     localStorage.setItem('caloria_history', JSON.stringify(data));
-    updateTodayTotal();
+    updateBadge();
   }
 
-  function updateTodayTotal() {
+  function updateBadge() {
     const items = getHistory();
-    const total = items.reduce((sum, i) => sum + i.cal, 0);
+    const total = items.reduce((s, i) => s + i.cal, 0);
     if (items.length > 0) {
-      todayBadge.style.display = 'flex';
-      todayTotal.textContent = `${total} kcal hoy`;
+      badge.style.display = 'flex';
+      badge.textContent = total + ' kcal hoy';
+    } else {
+      badge.style.display = 'none';
     }
   }
 
   function showHistory() {
+    show(screenHist);
     const items = getHistory();
+    let html = '';
     if (items.length === 0) {
-      historyContent.innerHTML = `
-        <div class="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 8v4l3 3"/>
-            <circle cx="12" cy="12" r="9"/>
-          </svg>
-          <p>Sin registros hoy</p>
-        </div>
-      `;
+      html = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg><p>Sin registros hoy</p></div>';
     } else {
-      const total = items.reduce((sum, i) => sum + i.cal, 0);
-      historyContent.innerHTML = items.map(i => `
-        <div class="history-item">
-          <div>
-            <div class="hi-name">${capitalize(i.food)}</div>
-            <div class="hi-time">${i.time}</div>
-          </div>
-          <div class="hi-cal">${i.cal}</div>
-        </div>
-      `).join('') + `
-        <div class="history-item" style="border-bottom:none;border-top:2px solid var(--separator);padding-top:16px;margin-top:4px;">
-          <div class="hi-name" style="font-size:17px;">Total</div>
-          <div class="hi-cal" style="font-size:22px;">${total} kcal</div>
-        </div>
-      `;
+      const total = items.reduce((s, i) => s + i.cal, 0);
+      const totalP = items.reduce((s, i) => s + i.p, 0).toFixed(1);
+      const totalC = items.reduce((s, i) => s + i.c, 0).toFixed(1);
+      const totalF = items.reduce((s, i) => s + i.f, 0).toFixed(1);
+      html += items.map(i => {
+        return '<div class="hist-item"><div class="hi-left"><div class="hi-name">' + i.emoji + ' ' + i.name + (i.mult !== 1 ? ' (' + i.mult + 'x)' : '') + '</div><div class="hi-time">' + i.time + '</div></div><div class="hi-cal">' + i.cal + '</div></div>';
+      }).join('');
+      html += '<div class="hist-total"><div class="ht-label">Total</div><div class="ht-val">' + total + ' kcal</div></div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;">';
+      html += '<div class="mc p" style="padding:10px"><div class="mv" style="font-size:18px">' + totalP + 'g</div><div class="ml">proteina</div></div>';
+      html += '<div class="mc cb" style="padding:10px"><div class="mv" style="font-size:18px">' + totalC + 'g</div><div class="ml">carbos</div></div>';
+      html += '<div class="mc" style="padding:10px"><div class="mv" style="font-size:18px;color:var(--orange)">' + totalF + 'g</div><div class="ml">grasas</div></div>';
+      html += '</div>';
     }
-    historyPanel.classList.add('open');
+    histWrap.innerHTML = html;
   }
 
-  // Event listeners
-  placeholder.addEventListener('click', initCamera);
-
-  btnCapture.addEventListener('click', () => {
-    if (!stream) {
-      initCamera().then(() => setTimeout(capture, 500));
-    } else {
-      capture();
-    }
+  /* ===== EVENT LISTENERS ===== */
+  ph.addEventListener('click', initCam);
+  btnSnap.addEventListener('click', () => {
+    if (!stream) { initCam().then(() => setTimeout(snap, 500)); } else { snap(); }
   });
+  btnFlip.addEventListener('click', () => { facingMode = facingMode === 'environment' ? 'user' : 'environment'; initCam(); });
+  btnHist.addEventListener('click', showHistory);
+  btnBack1.addEventListener('click', () => { show(screenCam); video.style.display = 'block'; ph.style.display = 'none'; });
+  btnBack2.addEventListener('click', () => show(screenPick));
+  btnBack3.addEventListener('click', () => show(screenCam));
 
-  btnSwitch.addEventListener('click', () => {
-    facingMode = facingMode === 'environment' ? 'user' : 'environment';
-    initCamera();
-  });
-
-  btnHistory.addEventListener('click', showHistory);
-  btnCloseHistory.addEventListener('click', () => historyPanel.classList.remove('open'));
-
-  // Close panels on swipe down
-  [resultPanel, historyPanel].forEach(panel => {
-    let startY = 0;
-    panel.addEventListener('touchstart', e => { startY = e.touches[0].clientY; });
-    panel.addEventListener('touchend', e => {
-      if (e.changedTouches[0].clientY - startY > 80) {
-        panel.classList.remove('open');
-      }
-    });
-  });
-
-  // Update total on load
-  updateTodayTotal();
+  updateBadge();
 })();
 </script>
 </body>
